@@ -1,0 +1,82 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UPI QR Scanner (Web)</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input, button { padding: 8px; margin: 4px 0; }
+    #history { margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h2>UPI QR Scanner (Web)</h2>
+  <div id="reader" style="width: 300px;"></div>
+
+  <div>
+    <p><strong>UPI ID:</strong> <span id="upiId">-</span></p>
+    <input type="text" id="tag" placeholder="Enter tag for this UPI ID" />
+    <button onclick="saveScan()">Save Entry</button>
+  </div>
+
+  <div id="history">
+    <h3>Scan History</h3>
+    <table>
+      <thead>
+        <tr><th>UPI ID</th><th>Tag</th><th>Timestamp</th></tr>
+      </thead>
+      <tbody id="historyTable"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let currentUpiId = '';
+    const upiIdSpan = document.getElementById("upiId");
+    const historyTable = document.getElementById("historyTable");
+
+    function extractUpiId(text) {
+      try {
+        const url = new URL(text);
+        return url.searchParams.get("pa") || '';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function saveScan() {
+      const tagInput = document.getElementById("tag").value.trim();
+      if (!currentUpiId) return alert("No UPI ID scanned");
+      const now = new Date().toLocaleString();
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${currentUpiId}</td><td>${tagInput || 'No tag'}</td><td>${now}</td>`;
+      historyTable.prepend(row);
+      document.getElementById("tag").value = '';
+    }
+
+    const html5QrCode = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices && devices.length) {
+        html5QrCode.start(
+          devices[0].id,
+          { fps: 10, qrbox: 250 },
+          (decodedText) => {
+            const upi = extractUpiId(decodedText);
+            if (upi && upi !== currentUpiId) {
+              currentUpiId = upi;
+              upiIdSpan.textContent = upi;
+            }
+          },
+          (errorMessage) => {
+            // ignore scan errors
+          }
+        );
+      }
+    }).catch(err => console.error(err));
+  </script>
+</body>
+</html>
